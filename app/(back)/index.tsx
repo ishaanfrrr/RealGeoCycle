@@ -1,14 +1,16 @@
-import { StyleSheet, View, Text, TouchableOpacity, Image, ScrollView, Platform, TextInput } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { auth } from '@/FirebaseConfig';
 import { getAuth, onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Dialog, Portal, Button, Paragraph } from 'react-native-paper';
+import { Button, Card, TextField, Banner, IconBadge } from '@/components/ui';
+import { colors, contentMaxWidth, radius, spacing, type } from '@/constants/theme';
 
 const features = [
-    { emoji: '📰', title: 'Eco News', description: 'Stay informed with the latest environmental headlines from around the world.' },
-    { emoji: '♻️', title: 'Waste Classifier', description: 'Snap a photo of any waste item and instantly learn how to dispose of it.' },
-    { emoji: '🌿', title: 'Eco Forum', description: 'Connect with others, share ideas, and discuss sustainable living.' },
+    { icon: 'newspaper' as const, title: 'Eco News', description: 'The latest environmental headlines from around the world.', href: '/news' },
+    { icon: 'scan' as const, title: 'Scan an item', description: 'Snap a photo to find out if it can be recycled.', href: '/waste' },
+    { icon: 'chatbubbles' as const, title: 'Community', description: 'Share ideas and talk about sustainable living.', href: '/forum' },
 ];
 
 export default function Index() {
@@ -23,9 +25,9 @@ export default function Index() {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [dialogVisible, setDialogVisible] = useState(false);
-    const [dialogMessage, setDialogMessage] = useState('');
-    const [dialogSuccess, setDialogSuccess] = useState(false);
+    const [message, setMessage] = useState('');
+    const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
@@ -38,135 +40,119 @@ export default function Index() {
         return () => unsubscribe();
     }, [router]);
 
+    const showError = (text: string) => {
+        setMessage(text);
+        setMessageTone('error');
+    };
+
+    const closeChangePassword = () => {
+        setShowChangePassword(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+    };
+
     const handleChangePassword = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setDialogMessage('Please fill in all fields.');
-            setDialogSuccess(false);
-            setDialogVisible(true);
+            showError('Please fill in all fields.');
             return;
         }
         if (newPassword !== confirmPassword) {
-            setDialogMessage('New passwords do not match.');
-            setDialogSuccess(false);
-            setDialogVisible(true);
+            showError('New passwords don\'t match.');
             return;
         }
         if (newPassword.length < 6) {
-            setDialogMessage('New password must be at least 6 characters.');
-            setDialogSuccess(false);
-            setDialogVisible(true);
+            showError('New password must be at least 6 characters.');
             return;
         }
+        setSaving(true);
         try {
             const user = getAuth().currentUser;
             if (!user || !user.email) throw new Error('Not logged in.');
             const credential = EmailAuthProvider.credential(user.email, currentPassword);
             await reauthenticateWithCredential(user, credential);
             await updatePassword(user, newPassword);
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-            setShowChangePassword(false);
-            setDialogMessage('Password changed successfully!');
-            setDialogSuccess(true);
-            setDialogVisible(true);
+            closeChangePassword();
+            setMessage('Password changed.');
+            setMessageTone('success');
         } catch (error: any) {
             if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                setDialogMessage('Current password is incorrect.');
+                showError('Current password is incorrect.');
             } else {
-                setDialogMessage('Failed to change password: ' + error.message);
+                showError('Couldn\'t change password: ' + error.message);
             }
-            setDialogSuccess(false);
-            setDialogVisible(true);
+        } finally {
+            setSaving(false);
         }
     };
 
     return (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-            <Portal>
-                <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)} style={{ backgroundColor: '#1C2B14' }}>
-                    <Dialog.Title style={{ color: dialogSuccess ? '#8BC34A' : '#C9A84C', fontWeight: 'bold' }}>
-                        {dialogSuccess ? 'Success' : 'Error'}
-                    </Dialog.Title>
-                    <Dialog.Content>
-                        <Paragraph style={{ color: '#E8F0DC', fontSize: 16 }}>{dialogMessage}</Paragraph>
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button onPress={() => setDialogVisible(false)} textColor="#8BC34A" labelStyle={{ fontWeight: 'bold' }}>OK</Button>
-                    </Dialog.Actions>
-                </Dialog>
-            </Portal>
-
-            <View style={styles.heroSection}>
-                <Image style={{ width: 90, height: 90, marginBottom: 16 }} source={require('@/assets/images/logo.png')} />
-                <Text style={styles.greeting}>{userName ? `Hello, ${userName} 👋` : 'Welcome back 👋'}</Text>
-                <Text style={styles.header}>GeoCycle</Text>
-                <Text style={styles.tagline}>Making sustainability simple, one choice at a time.</Text>
-            </View>
-
-            <View style={styles.featuresSection}>
-                <Text style={styles.sectionLabel}>What you can do</Text>
-                {features.map((f, i) => (
-                    <View key={i} style={styles.featureCard}>
-                        <Text style={styles.featureEmoji}>{f.emoji}</Text>
-                        <View style={styles.featureText}>
-                            <Text style={styles.featureTitle}>{f.title}</Text>
-                            <Text style={styles.featureDesc}>{f.description}</Text>
-                        </View>
-                    </View>
-                ))}
-            </View>
-
-            {showChangePassword && (
-                <View style={styles.changePasswordCard}>
-                    <Text style={styles.changePasswordTitle}>Change Password</Text>
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="Current Password"
-                        placeholderTextColor="#6B8A52"
-                        value={currentPassword}
-                        onChangeText={setCurrentPassword}
-                        secureTextEntry
-                    />
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="New Password"
-                        placeholderTextColor="#6B8A52"
-                        value={newPassword}
-                        onChangeText={setNewPassword}
-                        secureTextEntry
-                    />
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="Confirm New Password"
-                        placeholderTextColor="#6B8A52"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry
-                    />
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowChangePassword(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}>
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
-                            <Text style={styles.saveButtonText}>Save</Text>
-                        </TouchableOpacity>
-                    </View>
+            <View style={styles.column}>
+                <View style={styles.hero}>
+                    <Text style={styles.greeting}>{userName ? `Hi, ${userName}` : 'Welcome back'}</Text>
+                    <Text style={type.display}>What will you do{'\n'}for the planet today?</Text>
                 </View>
-            )}
 
-            <View style={styles.accountButtons}>
-                {!showChangePassword && (
-                    <TouchableOpacity style={styles.changePasswordButton} onPress={() => setShowChangePassword(true)}>
-                        <Text style={styles.changePasswordButtonText}>Change Password</Text>
-                    </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                    <Text style={styles.signOutText}>Sign Out</Text>
-                </TouchableOpacity>
+                <View style={styles.features}>
+                    {features.map((f) => (
+                        <Pressable
+                            key={f.title}
+                            onPress={() => router.push(f.href as any)}
+                            accessibilityRole="button"
+                            accessibilityLabel={f.title}
+                            style={({ pressed }) => [styles.featureCard, pressed && styles.featureCardPressed]}
+                        >
+                            <IconBadge name={f.icon} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={type.heading}>{f.title}</Text>
+                                <Text style={[type.bodyMuted, { marginTop: 2 }]}>{f.description}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+                        </Pressable>
+                    ))}
+                </View>
+
+                <Text style={styles.sectionLabel}>Account</Text>
+                {message !== '' && <Banner message={message} tone={messageTone} />}
+                <Card>
+                    {showChangePassword ? (
+                        <>
+                            <Text style={[type.heading, { marginBottom: spacing.lg }]}>Change password</Text>
+                            <TextField label="Current password" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoComplete="current-password" />
+                            <TextField label="New password" value={newPassword} onChangeText={setNewPassword} secureTextEntry autoComplete="new-password" />
+                            <TextField label="Confirm new password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoComplete="new-password" />
+                            <View style={styles.buttonRow}>
+                                <Button label="Cancel" variant="secondary" onPress={() => { closeChangePassword(); setMessage(''); }} style={{ flex: 1 }} />
+                                <Button label="Save" onPress={handleChangePassword} loading={saving} style={{ flex: 1 }} />
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <Pressable
+                                onPress={() => { setShowChangePassword(true); setMessage(''); }}
+                                accessibilityRole="button"
+                                style={({ pressed }) => [styles.accountRow, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons name="key-outline" size={20} color={colors.textMuted} />
+                                <Text style={[type.body, { flex: 1 }]}>Change password</Text>
+                                <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+                            </Pressable>
+                            <View style={styles.divider} />
+                            <Pressable
+                                onPress={handleSignOut}
+                                accessibilityRole="button"
+                                style={({ pressed }) => [styles.accountRow, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+                                <Text style={[type.body, { flex: 1, color: colors.danger }]}>Sign out</Text>
+                            </Pressable>
+                        </>
+                    )}
+                </Card>
+
+                <Text style={styles.attribution}>Icons by Pixellez from pngtree.com</Text>
             </View>
-
-            <Text style={styles.attribution}>Icons by Pixellez from pngtree.com</Text>
         </ScrollView>
     );
 }
@@ -174,165 +160,71 @@ export default function Index() {
 const styles = StyleSheet.create({
     scroll: {
         flex: 1,
-        backgroundColor: '#0E1A0A',
+        backgroundColor: colors.background,
     },
     container: {
-        alignItems: 'center',
-        padding: 24,
-        paddingBottom: 48,
+        padding: spacing.xl,
+        paddingBottom: spacing.xxxl,
     },
-    heroSection: {
-        alignItems: 'center',
-        paddingVertical: 32,
+    column: {
         width: '100%',
+        maxWidth: contentMaxWidth,
+        alignSelf: 'center',
+    },
+    hero: {
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.xl,
     },
     greeting: {
-        fontSize: 16,
-        color: '#6B8A52',
-        marginBottom: 4,
-        letterSpacing: 0.5,
-    },
-    header: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: '#8BC34A',
-        letterSpacing: 2,
-        marginBottom: 10,
-    },
-    tagline: {
+        ...type.label,
+        color: colors.primary,
         fontSize: 15,
-        color: '#A0B87A',
-        textAlign: 'center',
-        maxWidth: 300,
-        lineHeight: 22,
+        marginBottom: spacing.sm,
     },
-    featuresSection: {
-        width: Platform.select({ web: '60%', default: '100%' }),
-        marginTop: 8,
-        gap: 14,
-    },
-    sectionLabel: {
-        fontSize: 12,
-        color: '#6B8A52',
-        letterSpacing: 1.5,
-        textTransform: 'uppercase',
-        marginBottom: 4,
+    features: {
+        gap: spacing.md,
+        marginBottom: spacing.xxl,
     },
     featureCard: {
-        backgroundColor: '#1C2B14',
-        borderRadius: 14,
-        padding: 20,
         flexDirection: 'row',
         alignItems: 'center',
+        gap: spacing.lg,
+        backgroundColor: colors.surface,
+        borderRadius: radius.lg,
         borderWidth: 1,
-        borderColor: '#3D5C28',
-        gap: 16,
+        borderColor: colors.border,
+        padding: spacing.lg,
     },
-    featureEmoji: {
-        fontSize: 32,
+    featureCardPressed: {
+        backgroundColor: colors.surfaceRaised,
+        borderColor: colors.borderStrong,
     },
-    featureText: {
-        flex: 1,
+    sectionLabel: {
+        ...type.label,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        fontSize: 12,
+        marginBottom: spacing.md,
     },
-    featureTitle: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#E8F0DC',
-        marginBottom: 4,
+    accountRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        minHeight: 48,
     },
-    featureDesc: {
-        fontSize: 13,
-        color: '#7A9B5A',
-        lineHeight: 19,
-    },
-    changePasswordCard: {
-        width: Platform.select({ web: '60%', default: '100%' }),
-        backgroundColor: '#1C2B14',
-        borderRadius: 14,
-        padding: 20,
-        marginTop: 24,
-        borderWidth: 1,
-        borderColor: '#3D5C28',
-    },
-    changePasswordTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#E8F0DC',
-        marginBottom: 16,
-    },
-    textInput: {
-        backgroundColor: '#243318',
-        borderRadius: 10,
-        padding: 14,
-        marginBottom: 12,
-        color: '#E8F0DC',
-        borderWidth: 1,
-        borderColor: '#3D5C28',
-        fontSize: 15,
+    divider: {
+        height: 1,
+        backgroundColor: colors.border,
+        marginVertical: spacing.xs,
     },
     buttonRow: {
         flexDirection: 'row',
-        gap: 10,
-        marginTop: 4,
-    },
-    cancelButton: {
-        flex: 1,
-        padding: 13,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: '#3D5C28',
-        alignItems: 'center',
-    },
-    cancelButtonText: {
-        color: '#6B8A52',
-        fontWeight: '600',
-        fontSize: 15,
-    },
-    saveButton: {
-        flex: 1,
-        padding: 13,
-        borderRadius: 10,
-        backgroundColor: '#5B8C35',
-        alignItems: 'center',
-    },
-    saveButtonText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 15,
-    },
-    accountButtons: {
-        marginTop: 32,
-        gap: 12,
-        alignItems: 'center',
-    },
-    changePasswordButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 36,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: '#3D5C28',
-    },
-    changePasswordButtonText: {
-        color: '#8BC34A',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    signOutButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 36,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: '#5B4A3A',
-        backgroundColor: 'transparent',
-    },
-    signOutText: {
-        color: '#8B6343',
-        fontSize: 15,
-        fontWeight: '600',
+        gap: spacing.md,
+        marginTop: spacing.xs,
     },
     attribution: {
-        marginTop: 24,
-        color: '#3D5228',
-        fontSize: 11,
+        ...type.caption,
+        textAlign: 'center',
+        marginTop: spacing.xxl,
     },
 });

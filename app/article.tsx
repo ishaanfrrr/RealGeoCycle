@@ -1,294 +1,156 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
-import { Text, ActivityIndicator, MD2Colors } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { API_BASE_URL } from '@/constants/api';
+import { EmptyState } from '@/components/ui';
+import { colors, radius, spacing } from '@/constants/theme';
+
 export default function NewsArticle() {
   const { uri } = useLocalSearchParams();
-  const [articleData, setArticleData]: any = useState(null);
-  const [loading, setLoading] = useState(true);   
-  
+  const [articleData, setArticleData] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/article?uri=${uri}`)
-      .then((response) => response.text())
-      .then((data: any) => {        
-        setArticleData(data);
-        console.log (data)
-        setLoading(false);
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
       })
-      .catch((error) => {
-        console.error('Error fetching article data:', error);
-        setLoading(false);
-      });   
+      .then((data) => setArticleData(data))
+      .catch((error) => console.error('Error fetching article data:', error))
+      .finally(() => setLoading(false));
   }, [uri]);
+
   if (loading) {
-    return  (
-        <View style={styles.loadingContainer}>                  
-            <ActivityIndicator animating={true} color={MD2Colors.red800} />
-        </View>
-    )
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
   }
 
   if (!articleData) {
-    return <Text>Error loading article.</Text>;
+    return <EmptyState icon="document-text-outline" title="Couldn't load this article" message="Go back and try again in a moment." />;
   }
 
   return (
-    <ScrollView style={styles.container}>
-        <View style={styles.textContainer}>
-      <Text><Markdown style = {newStyles}>{articleData}</Markdown></Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Markdown style={markdownStyles}>{articleData}</Markdown>
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: colors.background,
   },
-  meta: {
-    fontSize: 16,
-    color: 'grey',
-    marginBottom: 20,
+  content: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxxl,
   },
-  textContainer: {
-    ...Platform.select({
-        ios: {
-            width:'100%'
-        },
-        android: {
-            width:'100%'
-        },
-        default: {
-          width:'80%'
-        },
-      }),
-    alignSelf:'center',
-    padding:20
-  },
-  loadingContainer: {
+  center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  }
+    backgroundColor: colors.background,
+  },
 });
 
-const newStyles = StyleSheet.create({
-  // The main container
-  body: {
-    fontSize:15,
-    lineHeight:23,
-    color:'white'
-  },
+const mono = Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' });
 
-  // Headings
+const markdownStyles = StyleSheet.create({
+  body: {
+    fontSize: 17,
+    lineHeight: 28,
+    color: colors.text,
+  },
   heading1: {
-    flexDirection: 'row',
-    fontSize: 40,
-    fontWeight:'bold',
-    marginTop:30,
-    marginBottom:20,
-    lineHeight:50
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    color: colors.text,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   heading2: {
-    flexDirection: 'row',
-    fontSize: 35,
-    fontWeight:'bold',
-    marginTop:25,
-    marginBottom:10,
-    lineHeight:40
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   heading3: {
-    flexDirection: 'row',
-    fontSize: 30,
-    fontWeight:'bold',
-    marginTop:20,
-    marginBottom:10,
-    lineHeight:35
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  heading4: {
-    flexDirection: 'row',
-    fontSize: 20,
-    fontWeight:'bold',
-    marginTop:15,
-    marginBottom:10,
-    lineHeight:30
+  heading4: { fontSize: 17, fontWeight: '700', color: colors.text, marginTop: spacing.md },
+  heading5: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: spacing.md },
+  heading6: { fontSize: 15, fontWeight: '700', color: colors.textMuted, marginTop: spacing.md },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: spacing.lg,
   },
-  heading5: {
-    flexDirection: 'row',
-    fontSize: 17,
-    fontWeight:'bold',
-    marginTop:10,
-    marginBottom:10,
-    lineHeight:20
-  },
-  heading6: {
-    flexDirection: 'row',
-    fontSize: 15,
-    fontWeight:'bold',
-    marginTop:5 ,
-    marginBottom:10,
-    lineHeight:15
-  },
-
-  // Horizontal Rule
+  strong: { fontWeight: '700' },
+  em: { fontStyle: 'italic', color: colors.textMuted },
   hr: {
-    backgroundColor: '#000000',
+    backgroundColor: colors.border,
     height: 1,
+    marginVertical: spacing.xl,
   },
-
-  // Emphasis
-  strong: {
-    fontWeight: 'bold',
-  },
-  em: {
-    fontStyle: 'italic',
-  },
-  s: {
-    textDecorationLine: 'line-through',
-  },
-
-  // Blockquotes
   blockquote: {
-    backgroundColor: '#000000',
-    borderColor: '#CCC',
-    borderLeftWidth: 4,
-    marginLeft: 5,
-    paddingHorizontal: 5,
+    backgroundColor: colors.surface,
+    borderLeftColor: colors.primary,
+    borderLeftWidth: 3,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginVertical: spacing.md,
+    marginLeft: 0,
   },
-
-  // Lists
-  bullet_list: {},
-  ordered_list: {},
-  list_item: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  // @pseudo class, does not have a unique render rule
-  bullet_list_icon: {
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  // @pseudo class, does not have a unique render rule
-  bullet_list_content: {
-    flex: 1,
-  },
-  // @pseudo class, does not have a unique render rule
-  ordered_list_icon: {
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  // @pseudo class, does not have a unique render rule
-  ordered_list_content: {
-    flex: 1,
-  },
-
-  // Code
+  bullet_list: { marginBottom: spacing.lg },
+  ordered_list: { marginBottom: spacing.lg },
+  list_item: { marginBottom: spacing.xs },
+  bullet_list_icon: { color: colors.primary, marginLeft: spacing.xs, marginRight: spacing.sm },
+  ordered_list_icon: { color: colors.primary, marginLeft: spacing.xs, marginRight: spacing.sm },
+  link: { color: colors.primary, textDecorationLine: 'none' },
   code_inline: {
-    borderWidth: 1,
-    borderColor: '#CCCCCC',
-    backgroundColor: '#000000',
-    padding: 10,
+    backgroundColor: colors.surfaceRaised,
+    color: colors.text,
     borderRadius: 4,
-    ...Platform.select({
-      ['ios']: {
-        fontFamily: 'Courier',
-      },
-      ['android']: {
-        fontFamily: 'monospace',
-      },
-    }),
+    paddingHorizontal: 4,
+    fontFamily: mono,
   },
   code_block: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderColor: '#CCCCCC',
-    backgroundColor: '#000000',
-    padding: 10,
-    borderRadius: 4,
-    ...Platform.select({
-      ['ios']: {
-        fontFamily: 'Courier',
-      },
-      ['android']: {
-        fontFamily: 'monospace',
-      },
-    }),
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontFamily: mono,
   },
   fence: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderColor: '#CCCCCC',
-    backgroundColor: '#000000',
-    padding: 10,
-    borderRadius: 4,
-    ...Platform.select({
-      ['ios']: {
-        fontFamily: 'Courier',
-      },
-      ['android']: {
-        fontFamily: 'monospace',
-      },
-    }),
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontFamily: mono,
   },
-
-  // Tables
-  table: {
-    borderWidth: 1,
-    borderColor: '#000000',
-    borderRadius: 3,
-  },
-  thead: {},
-  tbody: {},
-  th: {
-    flex: 1,
-    padding: 5,
-  },
-  tr: {
-    borderBottomWidth: 1,
-    borderColor: '#000000',
-    flexDirection: 'row',
-  },
-  td: {
-    flex: 1,
-    padding: 5,
-  },
-
-  // Links
-  link: {
-    textDecorationLine: 'underline',
-  },
-  blocklink: {
-    flex: 1,
-    borderColor: '#000000',
-    borderBottomWidth: 1,
-  },
-
-  // Images
-  image: {
-    flex: 1
-  },
-
-  // Text Output
-  text: {},
-  textgroup: {},
-  paragraph: {
-    marginTop: 10,
-    marginBottom: 10,
-    flexWrap: 'wrap',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    width: '100%',
-  },
-  hardbreak: {
-    width: '100%',
-    height: 1,
-  },
-  softbreak: {},
-
-  // Believe these are never used but retained for completeness
-  pre: {},
-  inline: {},
-  span: {},
+  table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.lg },
+  tr: { borderBottomWidth: 1, borderColor: colors.border, flexDirection: 'row' },
+  th: { flex: 1, padding: spacing.sm, fontWeight: '700' },
+  td: { flex: 1, padding: spacing.sm },
+  image: { borderRadius: radius.md },
 });

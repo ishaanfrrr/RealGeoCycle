@@ -1,235 +1,270 @@
-import { View, Text, SafeAreaView, StyleSheet, TextInput, TouchableOpacity, Image, Animated, Platform} from 'react-native'
+import { View, Text, StyleSheet, Image, Animated, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import React, { useState, useRef } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { auth } from '../FirebaseConfig'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { router } from 'expo-router'
-import { Dialog, Portal, Button, Paragraph } from 'react-native-paper';
+import { Button, TextField, Banner } from '@/components/ui'
+import { colors, radius, spacing, type } from '@/constants/theme'
+
+type Mode = 'login' | 'signup';
+
+// Turn Firebase error codes into something a person can act on.
+function friendlyAuthError(error: any) {
+    switch (error?.code) {
+        case 'auth/invalid-email': return 'That email address doesn\'t look right.';
+        case 'auth/invalid-credential':
+        case 'auth/wrong-password':
+        case 'auth/user-not-found': return 'Email or password is incorrect.';
+        case 'auth/email-already-in-use': return 'An account with this email already exists. Try logging in.';
+        case 'auth/weak-password': return 'Password must be at least 6 characters.';
+        case 'auth/too-many-requests': return 'Too many attempts. Wait a moment and try again.';
+        case 'auth/network-request-failed': return 'No connection. Check your internet and try again.';
+        default: return error?.message || 'Something went wrong. Please try again.';
+    }
+}
 
 const index = () => {
+    const [mode, setMode] = useState<Mode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [showLogin, setShowLogin] = useState(false);
-    const [showSignup, setShowSignup] = useState(false);
-    const [visible, setVisible] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const hideDialog = () => setVisible(false);
+    const switchMode = (next: Mode) => {
+        setMode(next);
+        setErrorMessage('');
+    };
 
     const signIn = async () => {
+        setErrorMessage('');
+        setLoading(true);
         try {
-            const user = await signInWithEmailAndPassword(auth, email, password);
+            const user = await signInWithEmailAndPassword(auth, email.trim(), password);
             if (user) router.replace('/(back)');
         } catch (error: any) {
-            setErrorMessage('Sign in failed: ' + error.message);
-            setVisible(true);
+            setErrorMessage(friendlyAuthError(error));
+        } finally {
+            setLoading(false);
         }
     }
 
     const signUp = async () => {
+        setErrorMessage('');
+        if (firstName.trim() == '' || lastName.trim() == '') {
+            setErrorMessage('Please enter your first and last name.');
+            return;
+        }
         if (password !== confirmPassword) {
-            setErrorMessage('Sign up failed: passwords do not match.');
-            setVisible(true);
+            setErrorMessage('Passwords don\'t match.');
             return;
         }
-        if (firstName == '' || lastName == '') {
-            setErrorMessage('Sign up failed: please set a name.');
-            setVisible(true);
-            return;
-        }
+        setLoading(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
             const user = userCredential.user;
             if (user) {
-                await updateProfile(user, { displayName: `${firstName} ${lastName}` });
+                await updateProfile(user, { displayName: `${firstName.trim()} ${lastName.trim()}` });
                 router.replace('/(back)');
             }
         } catch (error: any) {
-            setErrorMessage('Sign up failed: ' + error.message);
-            setVisible(true);
+            setErrorMessage(friendlyAuthError(error));
+        } finally {
+            setLoading(false);
         }
     }
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
+    const slideAnim = useRef(new Animated.Value(16)).current;
 
     React.useEffect(() => {
         Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-            Animated.spring(slideAnim, { toValue: 0, speed: 12, bounciness: 6, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, speed: 14, bounciness: 4, useNativeDriver: true }),
         ]).start();
     }, []);
 
     return (
-        <Animated.View style={[styles.outerContainer, { opacity: fadeAnim }]}>
-            <SafeAreaView style={styles.container}>
-                <Animated.View style={[styles.card, { transform: [{ translateY: slideAnim }] }]}>
-                    <Image style={{ width: 80, height: 80, marginBottom: 12 }} source={require('@/assets/images/logo.png')} />
-                    <Text style={styles.title}>GeoCycle</Text>
-                    <Text style={styles.subtitle}>Empowering sustainable choices</Text>
-
-                    <Portal>
-                        <Dialog visible={visible} onDismiss={hideDialog} style={{ backgroundColor: '#1C2B14' }}>
-                            <Dialog.Title style={{ color: '#C9A84C', fontSize: 20, fontWeight: 'bold' }}>Error</Dialog.Title>
-                            <Dialog.Content>
-                                <Paragraph style={{ color: '#E8F0DC', fontSize: 16 }}>{errorMessage}</Paragraph>
-                            </Dialog.Content>
-                            <Dialog.Actions>
-                                <Button onPress={hideDialog} textColor="#8BC34A" labelStyle={{ fontSize: 16, fontWeight: 'bold' }}>OK</Button>
-                            </Dialog.Actions>
-                        </Dialog>
-                    </Portal>
-
-                    {!showLogin && !showSignup && (
-                        <View style={styles.buttonGroup}>
-                            <TouchableOpacity style={styles.primaryButton} onPress={() => setShowLogin(true)}>
-                                <Text style={styles.primaryButtonText}>Login</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowSignup(true)}>
-                                <Text style={styles.secondaryButtonText}>Create Account</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {showLogin && (
-                        <View style={styles.formGroup}>
-                            <TextInput style={styles.textInput} placeholder="Email" placeholderTextColor="#6B8A52" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-                            <TextInput style={styles.textInput} placeholder="Password" placeholderTextColor="#6B8A52" value={password} onChangeText={setPassword} secureTextEntry />
-                            <TouchableOpacity style={styles.primaryButton} onPress={signIn}>
-                                <Text style={styles.primaryButtonText}>Login</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.ghostButton} onPress={() => setShowLogin(false)}>
-                                <Text style={styles.ghostButtonText}>← Back</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {showSignup && (
-                        <View style={styles.formGroup}>
-                            <View style={styles.row}>
-                                <TextInput style={[styles.textInput, styles.halfInput]} placeholder="First Name" placeholderTextColor="#6B8A52" value={firstName} onChangeText={setFirstName} />
-                                <TextInput style={[styles.textInput, styles.halfInput]} placeholder="Last Name" placeholderTextColor="#6B8A52" value={lastName} onChangeText={setLastName} />
+        <SafeAreaView style={styles.safe}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+                    <Animated.View style={[styles.column, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                        <View style={styles.brand}>
+                            <View style={styles.logoWrap}>
+                                <Image style={styles.logo} source={require('@/assets/images/logo.png')} />
                             </View>
-                            <TextInput style={styles.textInput} placeholder="Email" placeholderTextColor="#6B8A52" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-                            <TextInput style={styles.textInput} placeholder="Password" placeholderTextColor="#6B8A52" value={password} onChangeText={setPassword} secureTextEntry />
-                            <TextInput style={styles.textInput} placeholder="Confirm Password" placeholderTextColor="#6B8A52" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-                            <TouchableOpacity style={styles.primaryButton} onPress={signUp}>
-                                <Text style={styles.primaryButtonText}>Create Account</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.ghostButton} onPress={() => setShowSignup(false)}>
-                                <Text style={styles.ghostButtonText}>← Back</Text>
-                            </TouchableOpacity>
+                            <Text style={type.display}>GeoCycle</Text>
+                            <Text style={[type.bodyMuted, { marginTop: spacing.xs }]}>Sustainable choices, made simple.</Text>
                         </View>
-                    )}
-                </Animated.View>
-            </SafeAreaView>
-        </Animated.View>
+
+                        <View style={styles.segment} accessibilityRole="tablist">
+                            {(['login', 'signup'] as Mode[]).map((m) => {
+                                const active = mode === m;
+                                return (
+                                    <Pressable
+                                        key={m}
+                                        onPress={() => switchMode(m)}
+                                        accessibilityRole="tab"
+                                        accessibilityState={{ selected: active }}
+                                        style={[styles.segmentItem, active && styles.segmentItemActive]}
+                                    >
+                                        <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                                            {m === 'login' ? 'Log in' : 'Sign up'}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+
+                        {errorMessage !== '' && <Banner message={errorMessage} />}
+
+                        {mode === 'signup' && (
+                            <View style={styles.row}>
+                                <TextField
+                                    label="First name"
+                                    containerStyle={{ flex: 1 }}
+                                    value={firstName}
+                                    onChangeText={setFirstName}
+                                    textContentType="givenName"
+                                    autoComplete="given-name"
+                                />
+                                <TextField
+                                    label="Last name"
+                                    containerStyle={{ flex: 1 }}
+                                    value={lastName}
+                                    onChangeText={setLastName}
+                                    textContentType="familyName"
+                                    autoComplete="family-name"
+                                />
+                            </View>
+                        )}
+                        <TextField
+                            label="Email"
+                            icon="mail-outline"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            textContentType="emailAddress"
+                            autoComplete="email"
+                        />
+                        <TextField
+                            label="Password"
+                            icon="lock-closed-outline"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            textContentType={mode === 'login' ? 'password' : 'newPassword'}
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            onSubmitEditing={mode === 'login' ? signIn : undefined}
+                        />
+                        {mode === 'signup' && (
+                            <TextField
+                                label="Confirm password"
+                                icon="lock-closed-outline"
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry
+                                textContentType="newPassword"
+                                autoComplete="new-password"
+                                onSubmitEditing={signUp}
+                            />
+                        )}
+
+                        <Button
+                            label={mode === 'login' ? 'Log in' : 'Create account'}
+                            onPress={mode === 'login' ? signIn : signUp}
+                            loading={loading}
+                            style={{ marginTop: spacing.sm }}
+                        />
+
+                        <Pressable onPress={() => switchMode(mode === 'login' ? 'signup' : 'login')} style={styles.switchLink} hitSlop={8}>
+                            <Text style={type.bodyMuted}>
+                                {mode === 'login' ? 'New to GeoCycle? ' : 'Already have an account? '}
+                                <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                                    {mode === 'login' ? 'Create an account' : 'Log in'}
+                                </Text>
+                            </Text>
+                        </Pressable>
+                    </Animated.View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     )
 }
 
 export default index
 
 const styles = StyleSheet.create({
-    outerContainer: {
+    safe: {
         flex: 1,
-        backgroundColor: '#0E1A0A',
+        backgroundColor: colors.background,
     },
-    container: {
-        flex: 1,
+    scroll: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        padding: spacing.xl,
+    },
+    column: {
+        width: '100%',
+        maxWidth: 420,
+        alignSelf: 'center',
+    },
+    brand: {
+        alignItems: 'center',
+        marginBottom: spacing.xxl,
+    },
+    logoWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: radius.xl,
+        backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 20,
+        marginBottom: spacing.lg,
     },
-    card: {
-        width: Platform.select({ web: '45%', default: '90%' }),
-        backgroundColor: '#1C2B14',
-        borderRadius: 20,
-        padding: 36,
-        alignItems: 'center',
+    logo: {
+        width: 48,
+        height: 48,
+    },
+    segment: {
+        flexDirection: 'row',
+        backgroundColor: colors.surface,
+        borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: '#3D5C28',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 16,
+        borderColor: colors.border,
+        padding: spacing.xs,
+        marginBottom: spacing.xl,
     },
-    title: {
-        fontSize: 36,
-        fontWeight: 'bold',
-        color: '#8BC34A',
-        letterSpacing: 1,
-        marginBottom: 4,
+    segmentItem: {
+        flex: 1,
+        minHeight: 40,
+        borderRadius: radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    subtitle: {
-        fontSize: 14,
-        color: '#6B8A52',
-        marginBottom: 32,
-        letterSpacing: 0.5,
+    segmentItemActive: {
+        backgroundColor: colors.surfaceRaised,
     },
-    buttonGroup: {
-        width: '100%',
-        gap: 12,
+    segmentText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.textFaint,
     },
-    formGroup: {
-        width: '100%',
+    segmentTextActive: {
+        color: colors.text,
     },
     row: {
         flexDirection: 'row',
-        gap: 10,
+        gap: spacing.md,
     },
-    textInput: {
-        width: '100%',
-        backgroundColor: '#243318',
-        borderRadius: 10,
-        padding: 14,
-        marginBottom: 12,
-        color: '#E8F0DC',
-        borderWidth: 1,
-        borderColor: '#3D5C28',
-        fontSize: 15,
-    },
-    halfInput: {
-        flex: 1,
-        width: undefined,
-    },
-    primaryButton: {
-        width: '100%',
-        backgroundColor: '#5B8C35',
-        borderRadius: 10,
-        padding: 15,
+    switchLink: {
         alignItems: 'center',
-        marginBottom: 10,
-    },
-    primaryButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 0.5,
-    },
-    secondaryButton: {
-        width: '100%',
-        backgroundColor: 'transparent',
-        borderRadius: 10,
-        padding: 15,
-        alignItems: 'center',
-        borderWidth: 1.5,
-        borderColor: '#5B8C35',
-        marginBottom: 10,
-    },
-    secondaryButtonText: {
-        color: '#8BC34A',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    ghostButton: {
-        width: '100%',
-        padding: 12,
-        alignItems: 'center',
-    },
-    ghostButtonText: {
-        color: '#6B8A52',
-        fontSize: 15,
+        marginTop: spacing.xl,
+        paddingVertical: spacing.sm,
     },
 });

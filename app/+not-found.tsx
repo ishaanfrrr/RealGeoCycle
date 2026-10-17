@@ -1,21 +1,17 @@
-import { StyleSheet, View, Text, Linking} from 'react-native';
+import { View } from 'react-native';
+import { router } from 'expo-router';
+import { Button, EmptyState } from '@/components/ui';
+import { colors } from '@/constants/theme';
 
-export default function Tips() {
+export default function NotFound() {
   return (
-    <View>
-      <Text style = {styles.header}>404 | Not found</Text>
-      <Text style={{color: 'dodgerblue',textAlign:'center',fontSize:20,marginTop:30}}
-      //@ts-ignore
-      onPress={() => Linking.openURL('/',"_self")}> Go to home page? </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <EmptyState
+        icon="compass-outline"
+        title="Page not found"
+        message="The page you're looking for doesn't exist."
+        action={<Button label="Go home" icon="home-outline" onPress={() => router.replace('/')} />}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    color:'white',
-    fontSize: 50,
-    textAlign:'center',
-    marginTop:60
-  }
-});

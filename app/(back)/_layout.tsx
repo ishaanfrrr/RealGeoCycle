@@ -1,20 +1,23 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
+import { colors } from '@/constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#8BC34A',
-        tabBarInactiveTintColor: '#4A6B35',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
-          backgroundColor: '#111F0A',
-          borderTopColor: '#2A3D1E',
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
+          height: 62,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
+          lineHeight: 14,
           fontWeight: '600',
         },
         headerShown: false,
@@ -24,7 +27,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+            <TabBarIcon size={24} name={focused ? 'home' : 'home-outline'} color={color} />
           ),
         }}
       />
@@ -33,25 +36,25 @@ export default function TabLayout() {
         options={{
           title: 'News',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'newspaper' : 'newspaper-outline'} color={color} />
+            <TabBarIcon size={24} name={focused ? 'newspaper' : 'newspaper-outline'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="waste"
         options={{
-          title: 'Classifier',
+          title: 'Scan',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'camera' : 'camera-outline'} color={color} />
+            <TabBarIcon size={24} name={focused ? 'scan-circle' : 'scan-circle-outline'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="forum"
         options={{
-          title: 'Forum',
+          title: 'Community',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'leaf' : 'leaf-outline'} color={color} />
+            <TabBarIcon size={24} name={focused ? 'chatbubbles' : 'chatbubbles-outline'} color={color} />
           ),
         }}
       />

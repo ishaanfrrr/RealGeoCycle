@@ -32,9 +32,6 @@ Expo is a framework that complements React Native, providing a set of tools and 
 ### React Native Paper
 To create a modern and intuitive user interface, GeoCycle utilizes React Native Paper, a material design compliant UI library for React Native. This library helps us deliver a polished and consistent look and feel across the application.
 
-### React Native Bottom Bar
-The Garbage Classifier feature integrates the React Native Bottom Bar, which provides users with easy access to the classification information and navigation options, enhancing usability and interaction.
-
 ### Node.js
 The backend of GeoCycle is powered by Node.js, a server-side JavaScript engine known for its efficiency and scalability. Node.js handles API requests and processes data securely, ensuring reliable performance.
 
