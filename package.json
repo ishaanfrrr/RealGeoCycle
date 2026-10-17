@@ -1,0 +1,42 @@
+{
+  "name": "geocycle",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "jest --watchAll",
+    "lint": "expo lint"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.27.0",
+    "@expo/vector-icons": "^15.0.3",
+    "@firebase/auth": "^1.10.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/native": "^7.0.14",
+    "@types/react": "~19.1.10",
+    "axios": "^1.8.4",
+    "expo": "~54.0.0",
+    "expo-camera": "~17.0.10",
+    "expo-file-system": "~19.0.22",
+    "expo-linking": "~8.0.12",
+    "expo-router": "~6.0.23",
+    "firebase": "^11.6.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-markdown-display": "^7.0.2",
+    "react-native-paper": "^5.13.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-simple-bottom-sheet": "^1.0.4",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-web": "^0.21.0",
+    "typescript": "^5.8.3"
+  }
+}
