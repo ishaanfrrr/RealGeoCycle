@@ -1,11 +1,3 @@
-![image](https://github.com/user-attachments/assets/b45548b0-923f-438c-815c-8168adb74245)
-
-
-
-![](https://github.com/user-attachments/assets/12871482-2cd2-48fc-8d1b-005c3c0878b1)
-
-
-
 GeoCycle is a cross-platform app available wherever you go, designed to address the pressing issues related to our Earth by providing users with actionable information and tools to make environmentally conscious decisions. Developed for the Congressional App Challenge, GeoCycle aims to foster a more sustainable future through three core features:
 
 ## Features
